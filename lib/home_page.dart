@@ -1,4 +1,3 @@
-import 'package:allen/feature_box.dart';
 import 'package:allen/openai_service.dart';
 import 'package:allen/pallete.dart';
 import 'package:animate_do/animate_do.dart';
@@ -6,18 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-class ChatMessage {
-  final String text;
-  final bool isUserMessage;
-
-  ChatMessage({
-    required this.text,
-    required this.isUserMessage,
-  });
-}
+import 'package:uuid/uuid.dart';
+import 'models/conversation.dart';
+import 'services/storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'models/chat_message.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -37,17 +30,61 @@ class _HomePageState extends State<HomePage> {
   int delay = 200;
   final TextEditingController _messageController = TextEditingController();
   String currentStreamedContent = '';
-  final List<ChatMessage> messages = [];
+  List<ChatMessage> messages = [];
   bool _isLoading = false;
   bool _isVoiceMode = true;
   bool _isListeningPressed = false;
   String _currentVoiceText = '';
+  late StorageService _storageService;
+  late Conversation _currentConversation;
+  List<Conversation> _conversations = [];
 
   @override
   void initState() {
     super.initState();
+    _initializeStorage();
     initSpeechToText();
     _initTts();
+  }
+
+  Future<void> _initializeStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    _storageService = StorageService(prefs);
+    _conversations = await _storageService.getConversations();
+    if (_conversations.isEmpty) {
+      _createNewConversation();
+    } else {
+      _currentConversation = _conversations.first;
+      setState(() {
+        messages = _currentConversation.messages;
+      });
+    }
+  }
+
+  Future<void> _createNewConversation() async {
+    final newConversation = Conversation(
+      id: const Uuid().v4(),
+      title: '新会话 ${_conversations.length + 1}',
+      createdAt: DateTime.now(),
+      messages: [],
+    );
+
+    await _storageService.addConversation(newConversation);
+    setState(() {
+      _conversations.insert(0, newConversation);
+      _currentConversation = newConversation;
+      messages = [];
+    });
+  }
+
+  Future<void> _updateCurrentConversation() async {
+    _currentConversation = Conversation(
+      id: _currentConversation.id,
+      title: _currentConversation.title,
+      createdAt: _currentConversation.createdAt,
+      messages: messages,
+    );
+    await _storageService.updateConversation(_currentConversation);
   }
 
   Future<void> _initTts() async {
@@ -128,6 +165,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
       await systemSpeak(fullResponse);
+      await _updateCurrentConversation();
     } catch (e) {
       setState(() {
         messages.add(ChatMessage(
@@ -164,6 +202,7 @@ class _HomePageState extends State<HomePage> {
         });
       }
       await systemSpeak(fullResponse);
+      await _updateCurrentConversation();
     } catch (e) {
       setState(() {
         messages.add(ChatMessage(
@@ -296,16 +335,101 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: BounceInDown(
+        child: const Text('快际新云'),
+      ),
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
+      centerTitle: true,
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: Column(
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Pallete.firstSuggestionBoxColor,
+            ),
+            child: const Center(
+              child: Text(
+                '会话列表',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.add),
+            title: const Text('新建会话'),
+            onTap: () {
+              _createNewConversation();
+              Navigator.pop(context);
+            },
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _conversations.length,
+              itemBuilder: (context, index) {
+                final conversation = _conversations[index];
+                return ListTile(
+                  leading: const Icon(Icons.chat),
+                  title: Text(conversation.title),
+                  subtitle: Text(
+                    conversation.messages.isEmpty
+                        ? '暂无消息'
+                        : conversation.messages.last.text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  selected: _currentConversation.id == conversation.id,
+                  onTap: () {
+                    setState(() {
+                      _currentConversation = conversation;
+                      messages = conversation.messages;
+                    });
+                    Navigator.pop(context);
+                  },
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () async {
+                      await _storageService.deleteConversation(conversation.id);
+                      setState(() {
+                        _conversations.removeAt(index);
+                        if (_currentConversation.id == conversation.id) {
+                          if (_conversations.isEmpty) {
+                            _createNewConversation();
+                          } else {
+                            _currentConversation = _conversations.first;
+                            messages = _currentConversation.messages;
+                          }
+                        }
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: BounceInDown(
-          child: const Text('快际新云'),
-        ),
-        leading: const Icon(Icons.menu),
-        centerTitle: true,
-      ),
+      appBar: _buildAppBar(),
+      drawer: _buildDrawer(),
       body: Column(
         children: [
           Expanded(
