@@ -215,7 +215,7 @@ class _HomePageState extends State<HomePage> {
                     onLongPressEnd: (_) async {
                       setState(() => _isListeningPressed = false);
                       await stopListening();
-                      
+
                       final finalVoiceText = _currentVoiceText;
                       if (finalVoiceText.isNotEmpty) {
                         setState(() {
@@ -227,7 +227,7 @@ class _HomePageState extends State<HomePage> {
                         });
                         await _processAIResponse(finalVoiceText);
                       }
-                      
+
                       setState(() {
                         _currentVoiceText = '';
                       });
@@ -301,7 +301,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: BounceInDown(
-          child: const Text('AI Assistant'),
+          child: const Text('快际新云'),
         ),
         leading: const Icon(Icons.menu),
         centerTitle: true,
@@ -348,7 +348,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 20),
                         const Text(
-                          '你好！我是你的AI助手，请问有什么可以帮你的吗？',
+                          '你好！我是你的快际新云AI助手，请问有什么可以帮你的吗？',
                           style: TextStyle(
                             fontSize: 20,
                             color: Pallete.mainFontColor,
