@@ -39,6 +39,9 @@ class _HomePageState extends State<HomePage> {
   String currentStreamedContent = '';
   final List<ChatMessage> messages = [];
   bool _isLoading = false;
+  bool _isVoiceMode = true;
+  bool _isListeningPressed = false;
+  String _currentVoiceText = '';
 
   @override
   void initState() {
@@ -72,17 +75,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> onSpeechResult(SpeechRecognitionResult result) async {
     setState(() {
       lastWords = result.recognizedWords;
-      _isLoading = true;
+      _currentVoiceText = result.recognizedWords;
     });
-
-    if (lastWords.isNotEmpty) {
-      setState(() {
-        messages.add(ChatMessage(
-          text: lastWords,
-          isUserMessage: true,
-        ));
-      });
-    }
   }
 
   Future<void> systemSpeak(String content) async {
@@ -148,12 +142,158 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _processAIResponse(String userInput) async {
+    try {
+      String fullResponse = '';
+      bool isFirstChunk = true;
+      await for (final chunk in openAIService.chatGPTAPI(userInput)) {
+        setState(() {
+          fullResponse += chunk;
+          if (isFirstChunk) {
+            messages.add(ChatMessage(
+              text: fullResponse,
+              isUserMessage: false,
+            ));
+            isFirstChunk = false;
+          } else {
+            messages.last = ChatMessage(
+              text: fullResponse,
+              isUserMessage: false,
+            );
+          }
+        });
+      }
+      await systemSpeak(fullResponse);
+    } catch (e) {
+      setState(() {
+        messages.add(ChatMessage(
+          text: '抱歉，出现了一些错误：$e',
+          isUserMessage: false,
+        ));
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     super.dispose();
     speechToText.stop();
     flutterTts.stop();
     _messageController.dispose();
+  }
+
+  Widget _buildBottomInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, -1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _isVoiceMode
+                ? GestureDetector(
+                    onLongPressStart: (_) async {
+                      setState(() {
+                        _isListeningPressed = true;
+                        _currentVoiceText = '';
+                      });
+                      await startListening();
+                    },
+                    onLongPressEnd: (_) async {
+                      setState(() => _isListeningPressed = false);
+                      await stopListening();
+                      
+                      final finalVoiceText = _currentVoiceText;
+                      if (finalVoiceText.isNotEmpty) {
+                        setState(() {
+                          messages.add(ChatMessage(
+                            text: finalVoiceText,
+                            isUserMessage: true,
+                          ));
+                          _isLoading = true;
+                        });
+                        await _processAIResponse(finalVoiceText);
+                      }
+                      
+                      setState(() {
+                        _currentVoiceText = '';
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text(
+                        _isListeningPressed
+                            ? (_currentVoiceText.isEmpty
+                                ? '正在聆听...'
+                                : _currentVoiceText)
+                            : '按住说话',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _isListeningPressed
+                              ? Pallete.firstSuggestionBoxColor
+                              : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  )
+                : TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: '输入消息...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: Icon(
+              _isVoiceMode ? Icons.keyboard : Icons.mic,
+              color: Pallete.firstSuggestionBoxColor,
+            ),
+            onPressed: () {
+              setState(() => _isVoiceMode = !_isVoiceMode);
+            },
+          ),
+          if (!_isVoiceMode)
+            IconButton(
+              icon: const Icon(
+                Icons.send,
+                color: Pallete.firstSuggestionBoxColor,
+              ),
+              onPressed: _sendMessage,
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -291,109 +431,8 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, -1),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: '输入消息...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  onPressed: _sendMessage,
-                  backgroundColor: Pallete.firstSuggestionBoxColor,
-                  child: const Icon(Icons.send),
-                  mini: true,
-                ),
-              ],
-            ),
-          ),
+          _buildBottomInput(),
         ],
-      ),
-      floatingActionButton: ZoomIn(
-        delay: Duration(milliseconds: start + 3 * delay),
-        child: FloatingActionButton(
-          backgroundColor: Pallete.firstSuggestionBoxColor,
-          onPressed: () async {
-            if (await speechToText.hasPermission &&
-                speechToText.isNotListening) {
-              await startListening();
-            } else if (speechToText.isListening) {
-              setState(() {
-                currentStreamedContent = '';
-                generatedContent = '';
-              });
-
-              await stopListening();
-
-              try {
-                String fullResponse = '';
-                bool isFirstChunk = true;
-                await for (final chunk in openAIService.chatGPTAPI(lastWords)) {
-                  setState(() {
-                    fullResponse += chunk;
-                    if (isFirstChunk) {
-                      messages.add(ChatMessage(
-                        text: fullResponse,
-                        isUserMessage: false,
-                      ));
-                      isFirstChunk = false;
-                    } else {
-                      messages.last = ChatMessage(
-                        text: fullResponse,
-                        isUserMessage: false,
-                      );
-                    }
-                  });
-                }
-                await systemSpeak(fullResponse);
-              } catch (e) {
-                setState(() {
-                  messages.add(ChatMessage(
-                    text: '抱歉，出现了一些错误：$e',
-                    isUserMessage: false,
-                  ));
-                });
-              } finally {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
-            } else {
-              initSpeechToText();
-            }
-          },
-          child: Icon(
-            speechToText.isListening ? Icons.stop : Icons.mic,
-          ),
-        ),
       ),
     );
   }
