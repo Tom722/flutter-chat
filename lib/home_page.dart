@@ -1,4 +1,3 @@
-import 'package:allen/openai_service.dart';
 import 'package:allen/pallete.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
@@ -9,9 +8,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:uuid/uuid.dart';
 import 'models/conversation.dart';
 import 'services/storage_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'services/chat_service.dart';
 import 'models/chat_message.dart';
 import 'models/user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   bool _isListeningPressed = false;
   String _currentVoiceText = '';
   late StorageService _storageService;
+  late SharedPreferences _prefs;
   late Conversation _currentConversation;
   List<Conversation> _conversations = [];
 
@@ -49,8 +50,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _initializeStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    _storageService = StorageService(prefs);
+    _prefs = await SharedPreferences.getInstance();
+    _storageService = StorageService(_prefs);
     _conversations = await _storageService.getConversations();
     if (_conversations.isEmpty) {
       _createNewConversation();
@@ -120,6 +121,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> systemSpeak(String content) async {
     try {
       if (kIsWeb) {
+        // 设置语速
+        await flutterTts.setSpeechRate(3);
+        // 音调
+        await flutterTts.setPitch(0.8);
         await flutterTts.speak(content);
       } else {
         await flutterTts.setSharedInstance(true);
@@ -502,7 +507,7 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         );
-                        
+
                         if (confirmed == true && context.mounted) {
                           await StorageService.clearUser();
                           Navigator.of(context).pushReplacementNamed('/login');
