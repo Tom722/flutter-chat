@@ -12,6 +12,7 @@ import 'services/chat_service.dart';
 import 'models/chat_message.dart';
 import 'models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -635,15 +636,51 @@ class _HomePageState extends State<HomePage> {
                                 !message.isUserMessage ? Radius.zero : null,
                           ),
                         ),
-                        child: Text(
-                          message.text,
-                          style: TextStyle(
-                            color: message.isUserMessage
-                                ? Colors.white
-                                : Colors.black,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: message.isUserMessage
+                            ? Text(
+                                message.text,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              )
+                            : MarkdownBody(
+                                data: message.text,
+                                selectable: true,
+                                styleSheet: MarkdownStyleSheet(
+                                  p: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 16,
+                                  ),
+                                  code: const TextStyle(
+                                    color: Colors.white,
+                                    fontFamily: 'monospace',
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    backgroundColor: Colors.transparent,
+                                  ),
+                                  codeblockPadding: const EdgeInsets.all(16),
+                                  codeblockDecoration: BoxDecoration(
+                                    color: const Color(0xFF1E1E1E),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  blockquote: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 16,
+                                    height: 1.5,
+                                  ),
+                                  blockquoteDecoration: BoxDecoration(
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: Colors.grey[300]!,
+                                        width: 4,
+                                      ),
+                                    ),
+                                  ),
+                                  listBullet:
+                                      const TextStyle(color: Colors.black87),
+                                ),
+                              ),
                       ),
                     ),
                     if (_isLoading &&
