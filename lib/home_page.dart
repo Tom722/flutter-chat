@@ -30,6 +30,8 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'pages/apps_page.dart';
 
+import 'pages/chat_bubble.dart';
+
 class HomePage extends StatefulWidget {
   final String? customTitle;
 
@@ -266,7 +268,7 @@ class _HomePageState extends State<HomePage> {
         }
       }
 
-      await systemSpeak(fullResponse);
+      //await systemSpeak(fullResponse);
 
       await _updateCurrentConversation();
     } catch (e) {
@@ -323,7 +325,7 @@ class _HomePageState extends State<HomePage> {
         }
       }
 
-      await systemSpeak(fullResponse);
+      // await systemSpeak(fullResponse);
 
       await _updateCurrentConversation();
     } catch (e) {
@@ -791,75 +793,7 @@ class _HomePageState extends State<HomePage> {
 
                     return Column(
                       children: [
-                        Align(
-                          alignment: message.isUserMessage
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.all(12),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: message.isUserMessage
-                                  ? Pallete.firstSuggestionBoxColor
-                                  : Pallete.assistantCircleColor,
-                              borderRadius: BorderRadius.circular(15).copyWith(
-                                bottomRight:
-                                    message.isUserMessage ? Radius.zero : null,
-                                bottomLeft:
-                                    !message.isUserMessage ? Radius.zero : null,
-                              ),
-                            ),
-                            child: message.isUserMessage
-                                ? Text(
-                                    message.text,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                    ),
-                                  )
-                                : MarkdownBody(
-                                    data: message.text,
-                                    selectable: true,
-                                    styleSheet: MarkdownStyleSheet(
-                                      p: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                      ),
-                                      code: const TextStyle(
-                                        color: Colors.white,
-                                        fontFamily: 'monospace',
-                                        fontSize: 14,
-                                        height: 1.5,
-                                        backgroundColor: Colors.transparent,
-                                      ),
-                                      codeblockPadding:
-                                          const EdgeInsets.all(16),
-                                      codeblockDecoration: BoxDecoration(
-                                        color: const Color(0xFF1E1E1E),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      blockquote: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 16,
-                                        height: 1.5,
-                                      ),
-                                      blockquoteDecoration: BoxDecoration(
-                                        border: Border(
-                                          left: BorderSide(
-                                            color: Colors.grey[300]!,
-                                            width: 4,
-                                          ),
-                                        ),
-                                      ),
-                                      listBullet: const TextStyle(
-                                          color: Colors.black87),
-                                    ),
-                                  ),
-                          ),
-                        ),
+                        ChatBubble(message: message),
                         if (_isLoading &&
                             index == messages.length - 1 &&
                             message.isUserMessage)
