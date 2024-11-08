@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:allen/models/user.dart';
 import 'package:allen/services/storage_service.dart';
+import 'package:allen/services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,11 +25,30 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final user = User(username: username, password: password);
-    await StorageService.saveUser(user);
+    try {
+      final response = await ApiService.login(username, password);
 
-    if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      if (response['result'] == 'success') {
+        final token = response['data'];
+        final user = User(username: username, password: password, token: token);
+        await StorageService.saveUser(user);
+
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/home');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('登录失败，请检查用户名和密码')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('登录失败，请稍后重试')),
+        );
+      }
     }
   }
 
