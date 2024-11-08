@@ -793,7 +793,12 @@ class _HomePageState extends State<HomePage> {
 
                     return Column(
                       children: [
-                        ChatBubble(message: message),
+                        ChatBubble(
+                          message: message,
+                          isTyping: _isLoading &&
+                              index == messages.length - 1 &&
+                              !message.isUserMessage,
+                        ),
                         if (_isLoading &&
                             index == messages.length - 1 &&
                             message.isUserMessage)
