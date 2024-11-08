@@ -70,11 +70,6 @@ flutter:
   assets:
     - assets/images/
     - assets/sounds/
-    - assets/images/article.png
-    - assets/images/code.png
-    - assets/images/translate.png
-    - assets/images/math.png
-    - assets/images/life.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

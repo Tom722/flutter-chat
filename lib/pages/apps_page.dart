@@ -1,45 +1,60 @@
 import 'package:flutter/material.dart';
+import '../services/apps_service.dart';
 import '../models/app_item.dart';
 import '../pallete.dart';
+import '../services/storage_service.dart';
+import '../models/user.dart';
 
-class AppsPage extends StatelessWidget {
-  AppsPage({super.key});
+class AppsPage extends StatefulWidget {
+  const AppsPage({super.key});
 
-  final List<AppItem> apps = [
-    AppItem(
-      id: '1',
-      name: '文章助手',
-      description: '帮助您撰写高质量的文章，提供创意和灵感',
-      imageUrl: 'assets/images/article.png',
-    ),
-    AppItem(
-      id: '2',
-      name: '代码专家',
-      description: '解答编程问题，优化代码结构，提供最佳实践',
-      imageUrl: 'assets/images/code.png',
-    ),
-    AppItem(
-      id: '3',
-      name: '翻译助手',
-      description: '精准翻译多国语言，支持专业术语翻译',
-      imageUrl: 'assets/images/translate.png',
-    ),
-    AppItem(
-      id: '4',
-      name: '数学导师',
-      description: '解决数学问题，讲解数学概念和公式',
-      imageUrl: 'assets/images/math.png',
-    ),
-    AppItem(
-      id: '5',
-      name: '生活顾问',
-      description: '提供日常生活建议，解答各类生活问题',
-      imageUrl: 'assets/images/life.png',
-    ),
-  ];
+  @override
+  State<AppsPage> createState() => _AppsPageState();
+}
+
+class _AppsPageState extends State<AppsPage> {
+  late final AppsService _appsService;
+  List<AppItem> apps = [];
+  bool isLoading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeService();
+  }
+
+  Future<void> _initializeService() async {
+    final User? user = await StorageService.getUser();
+    _appsService = AppsService(token: user?.token);
+    fetchApps();
+  }
+
+  Future<void> fetchApps() async {
+    try {
+      final appsList = await _appsService.getApps();
+      setState(() {
+        apps = appsList;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (error != null) {
+      return Center(child: Text(error!));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: apps.length,
@@ -57,10 +72,19 @@ class AppsPage extends StatelessWidget {
                 color: Pallete.firstSuggestionBoxColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.apps,
-                size: 30,
-                color: Pallete.firstSuggestionBoxColor,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  app.iconUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      Icons.apps,
+                      size: 30,
+                      color: Pallete.firstSuggestionBoxColor,
+                    );
+                  },
+                ),
               ),
             ),
             title: Text(

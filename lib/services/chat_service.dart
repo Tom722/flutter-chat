@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../secrets.dart';
 
 class OpenAIService {
-  final String baseUrl =
-      'https://knowledge-web.apps.iytcloud.com/console/api/openapi/chat';
   final String apiKey = 'sk-OVjS7VE9mT68Uvg7kSFoMnbU6EU836FO';
   final String appKey = 'app-FRP2s2wSx01rsE67';
   String? conversationId;
@@ -13,7 +12,7 @@ class OpenAIService {
     var buffer = StringBuffer();
 
     try {
-      final request = http.Request('POST', Uri.parse(baseUrl));
+      final request = http.Request('POST', Uri.parse('$baseUrl/openapi/chat'));
       request.headers.addAll({
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',
