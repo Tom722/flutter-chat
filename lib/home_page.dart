@@ -154,22 +154,31 @@ class _HomePageState extends State<HomePage> {
     try {
       String fullResponse = '';
       bool isFirstChunk = true;
+      // 创建一个缓冲区来存储收到的文本
+      StringBuffer buffer = StringBuffer();
       await for (final chunk in openAIService.chatGPTAPI(userMessage)) {
-        setState(() {
-          fullResponse += chunk;
-          if (isFirstChunk) {
-            messages.add(ChatMessage(
-              text: fullResponse,
-              isUserMessage: false,
-            ));
-            isFirstChunk = false;
-          } else {
-            messages.last = ChatMessage(
-              text: fullResponse,
-              isUserMessage: false,
-            );
-          }
-        });
+        buffer.write(chunk);
+        // 逐字显示文本
+        for (int i = fullResponse.length; i < buffer.length; i++) {
+          setState(() {
+            fullResponse += buffer.toString()[i];
+            if (isFirstChunk && i == 0) {
+              messages.add(ChatMessage(
+                text: fullResponse,
+                isUserMessage: false,
+              ));
+              isFirstChunk = false;
+            } else {
+              messages.last = ChatMessage(
+                text: fullResponse,
+                isUserMessage: false,
+              );
+            }
+          });
+
+          // 添加短暂延迟以创建打字效果
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
       }
       await systemSpeak(fullResponse);
       await _updateCurrentConversation();
@@ -191,22 +200,32 @@ class _HomePageState extends State<HomePage> {
     try {
       String fullResponse = '';
       bool isFirstChunk = true;
+      // 创建一个缓冲区来存储收到的文本
+      StringBuffer buffer = StringBuffer();
       await for (final chunk in openAIService.chatGPTAPI(userInput)) {
-        setState(() {
-          fullResponse += chunk;
-          if (isFirstChunk) {
-            messages.add(ChatMessage(
-              text: fullResponse,
-              isUserMessage: false,
-            ));
-            isFirstChunk = false;
-          } else {
-            messages.last = ChatMessage(
-              text: fullResponse,
-              isUserMessage: false,
-            );
-          }
-        });
+        buffer.write(chunk);
+
+        // 逐字显示文本
+        for (int i = fullResponse.length; i < buffer.length; i++) {
+          setState(() {
+            fullResponse += buffer.toString()[i];
+            if (isFirstChunk && i == 0) {
+              messages.add(ChatMessage(
+                text: fullResponse,
+                isUserMessage: false,
+              ));
+              isFirstChunk = false;
+            } else {
+              messages.last = ChatMessage(
+                text: fullResponse,
+                isUserMessage: false,
+              );
+            }
+          });
+
+          // 添加短暂延迟以创建打字效果
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
       }
       await systemSpeak(fullResponse);
       await _updateCurrentConversation();
