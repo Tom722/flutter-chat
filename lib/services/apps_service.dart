@@ -8,9 +8,9 @@ class AppsService {
 
   AppsService({this.token});
 
-  Future<List<AppItem>> getApps({int page = 1, int limit = 12}) async {
+  Future<List<AppItem>> getApps({int page = 1, int pageSize = 4}) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/apps/?page=$page&limit=$limit'),
+      Uri.parse('$baseUrl/apps/?page=$page&pageSize=$pageSize'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

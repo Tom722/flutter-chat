@@ -18,10 +18,60 @@ class _AppsPageState extends State<AppsPage> {
   bool isLoading = true;
   String? error;
 
+  bool _isLoadingMore = false;
+  int _currentPage = 1;
+  bool _hasMoreData = true;
+  final ScrollController _scrollController = ScrollController();
+  static const int _pageSize = 4;
+
   @override
   void initState() {
     super.initState();
     _initializeService();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _loadMoreData();
+    }
+  }
+
+  Future<void> _loadMoreData() async {
+    if (_isLoadingMore || !_hasMoreData) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final newApps = await _appsService.getApps(
+        page: _currentPage + 1,
+        pageSize: _pageSize,
+      );
+
+      if (newApps.isEmpty) {
+        _hasMoreData = false;
+      } else {
+        setState(() {
+          apps.addAll(newApps);
+          _currentPage++;
+        });
+      }
+    } catch (e) {
+      // 处理错误，可以显示一个 snackbar 或 toast
+    } finally {
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
   }
 
   Future<void> _initializeService() async {
@@ -32,10 +82,15 @@ class _AppsPageState extends State<AppsPage> {
 
   Future<void> fetchApps() async {
     try {
-      final appsList = await _appsService.getApps();
+      final appsList = await _appsService.getApps(
+        page: 1,
+        pageSize: _pageSize,
+      );
       setState(() {
         apps = appsList;
         isLoading = false;
+        _currentPage = 1;
+        _hasMoreData = appsList.length >= _pageSize;
       });
     } catch (e) {
       setState(() {
@@ -56,9 +111,14 @@ class _AppsPageState extends State<AppsPage> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: apps.length,
+      itemCount: apps.length + (_hasMoreData ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == apps.length) {
+          return _buildLoadingIndicator();
+        }
+
         final app = apps[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -111,6 +171,19 @@ class _AppsPageState extends State<AppsPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Center(
+        child: _isLoadingMore
+            ? const CircularProgressIndicator()
+            : _hasMoreData
+                ? const SizedBox()
+                : const Text('没有更多数据了'),
+      ),
     );
   }
 }
